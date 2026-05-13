@@ -139,7 +139,11 @@ def success_color(success):
 builds = []
 all_success = True
 for i_exp, exp_dir in enumerate(args.exploit_paths):
+    # WARNING: metadata is not trusted and needs to be sanitized
     metadata = json.loads(readTextFile(f"{exp_dir}/metadata.json"))
+    for x in metadata["submission_ids"]:
+        if not re.match(r"^exp\d+$", x):
+            fatal(f"Error: invalid exp_id '{x}'")
     exp_ids = "exp" + "_".join(x.replace("exp", "") for x in metadata["submission_ids"])
     first_exp_id = metadata["submission_ids"][0]
     commit_hash_pr = hash_from_url(metadata["vulnerability"]["patch_commit"])
@@ -149,6 +153,9 @@ for i_exp, exp_dir in enumerate(args.exploit_paths):
     exp_success = False
     exp_fail = False
     targets = list(metadata["exploits"].keys())
+    for target in targets:
+        if not re.match(r"^(lts|cos|mitigation)-[a-z0-9.-]+$", target):
+            fatal(f"Error: invalid target '{target}'")
     for i_target, target in enumerate(targets):
         orig_target = target
         if target == "mitigation-6.1":
@@ -239,7 +246,7 @@ for i_exp, exp_dir in enumerate(args.exploit_paths):
 
             if not os.path.isfile(f"builds/{target}_bzImage"):
                 print(f"  [DOWNLOAD] downloading release {target}...")
-                run(f"wget -qO builds/{target}_bzImage {KERNELCTF_RELEASES_URL}/{target}/bzImage")
+                run(["wget", "-qO", f"builds/{target}_bzImage", f"{KERNELCTF_RELEASES_URL}/{target}/bzImage"])
 
         res = {}
         for name in build_targets:
